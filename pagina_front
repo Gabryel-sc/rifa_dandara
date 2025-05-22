@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rifa Solidária</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #f8fafc;
+      margin: 0;
+      padding: 1rem;
+    }
+    h1 {
+      text-align: center;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+      gap: 5px;
+      max-width: 600px;
+      margin: auto;
+    }
+    .numero {
+      padding: 10px;
+      background-color: white;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      text-align: center;
+    }
+    .numero.selecionado {
+      background-color: #a3e635;
+      color: black;
+      font-weight: bold;
+    }
+    form {
+      max-width: 400px;
+      margin: 2rem auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Escolha seu número da rifa</h1>
+
+  <div id="numeros" class="grid"></div>
+
+  <form id="formulario">
+    <input type="text" id="nome" placeholder="Nome completo" required />
+    <input type="tel" id="telefone" placeholder="Telefone" required />
+    <input type="number" id="numeroEscolhido" placeholder="Número escolhido" readonly required />
+    <button type="submit">Comprar Rifa</button>
+  </form>
+
+  <script>
+    const numerosDiv = document.getElementById('numeros');
+    const numeroInput = document.getElementById('numeroEscolhido');
+    let numeroSelecionado = null;
+
+    async function carregarNumerosDisponiveis() {
+      const res = await fetch('http://localhost:3001/api/rifas/disponiveis');
+      const disponiveis = await res.json();
+
+      for (let i = 1; i <= 1000; i++) {
+        const btn = document.createElement('div');
+        btn.classList.add('numero');
+        btn.textContent = i;
+
+        if (!disponiveis.includes(i)) {
+          btn.style.backgroundColor = '#e2e8f0';
+          btn.style.cursor = 'not-allowed';
+          btn.style.color = '#888';
+        } else {
+          btn.addEventListener('click', () => {
+            numeroSelecionado = i;
+            numeroInput.value = i;
+            document.querySelectorAll('.numero').forEach(el => el.classList.remove('selecionado'));
+            btn.classList.add('selecionado');
+          });
+        }
+
+        numerosDiv.appendChild(btn);
+      }
+    }
+
+    document.getElementById('formulario').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nome = document.getElementById('nome').value;
+      const telefone = document.getElementById('telefone').value;
+      const numero = numeroSelecionado;
+
+      if (!numero) return alert('Escolha um número disponível.');
+
+      const res = await fetch('http://localhost:3001/api/rifas/comprar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, telefone, numero })
+      });
+
+      const data = await res.json();
+      if (data.init_point) {
+        window.location.href = data.init_point;
+      } else {
+        alert('Erro ao gerar pagamento.');
+      }
+    });
+
+    carregarNumerosDisponiveis();
+  </script>
+</body>
+</html>
